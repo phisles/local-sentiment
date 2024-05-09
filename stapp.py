@@ -2,23 +2,24 @@
 import streamlit as st
 import os
 import matplotlib.pyplot as plt
-from transformers import BertTokenizer, BertForSequenceClassification
+from transformers import BertTokenizer, BertForSequenceClassification, DistilBertTokenizer, DistilBertForSequenceClassification, RobertaTokenizer, RobertaForSequenceClassification, XLNetTokenizer, XLNetForSequenceClassification, ElectraTokenizer, ElectraForSequenceClassification, GPT2Tokenizer, GPT2LMHeadModel
 import torch
 import numpy as np
 import nltk
 from nltk.tokenize import sent_tokenize
 from annotated_text import annotated_text
 import warnings
+from streamlit_extras.streaming_write import write
 
 # Suppress specific FutureWarnings
 warnings.filterwarnings("ignore", category=FutureWarning)
 
-# Load NLTK's Punkt tokenizer for sentence splitting
-nltk.download('punkt', quiet=True)
+# Load NLTK's Punkt tokenizer for sentence splitting if you havent already
+#nltk.download('punkt', quiet=True)
 
-# Initialize the tokenizer and model
 tokenizer = BertTokenizer.from_pretrained('nlptown/bert-base-multilingual-uncased-sentiment')
 model = BertForSequenceClassification.from_pretrained('nlptown/bert-base-multilingual-uncased-sentiment')
+
 
 @st.cache_data
 def load_data(directory):
