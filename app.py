@@ -49,3 +49,4 @@ for filename in os.listdir(directory_path):
                 print(f"Text Snippet: {text_snippet[:60]}...")  # Print the first 50 characters of the snippet and a line break
             print("_" * 50)  # Prints a line of underscores after each file's output
             print("\n")
+#test
