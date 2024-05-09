@@ -3,6 +3,7 @@ from transformers import BertTokenizer, BertForSequenceClassification
 import torch
 import nltk
 import warnings
+from nltk.tokenize import sent_tokenize
 
 # Suppress specific FutureWarnings
 warnings.filterwarnings("ignore", category=FutureWarning)
@@ -11,9 +12,9 @@ warnings.filterwarnings("ignore", category=FutureWarning)
 tokenizer = BertTokenizer.from_pretrained('nlptown/bert-base-multilingual-uncased-sentiment')
 model = BertForSequenceClassification.from_pretrained('nlptown/bert-base-multilingual-uncased-sentiment')
 
-# Download and load the NLTK sentence tokenizer
-nltk.download('punkt')
-from nltk.tokenize import sent_tokenize
+# Download and load the NLTK sentence tokenizer if not already done so
+#nltk.download('punkt')
+
 
 def process_content(content, max_tokens):
     sentences = sent_tokenize(content)
@@ -55,7 +56,7 @@ for filename in os.listdir(directory_path):
         with open(file_path, 'r') as file:
             content = file.read()
             print(f"----File: {filename}----")
-            for first, last, group in process_content(content, 500):
+            for first, last, group in process_content(content, 499):
                 sentiment_score = classify_tokens(group)
                 print(f"Sentiment Score: {sentiment_score}")
                 print(f"First Sentence: {first}")
