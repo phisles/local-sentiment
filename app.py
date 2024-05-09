@@ -4,32 +4,46 @@ import torch
 import nltk
 import warnings
 
-# Suppress specific FutureWarnings from huggingface_hub
-warnings.filterwarnings("ignore", category=FutureWarning, module="huggingface_hub")
+# Suppress specific FutureWarnings
+warnings.filterwarnings("ignore", category=FutureWarning)
 
 # Initialize the tokenizer and model
 tokenizer = BertTokenizer.from_pretrained('nlptown/bert-base-multilingual-uncased-sentiment')
 model = BertForSequenceClassification.from_pretrained('nlptown/bert-base-multilingual-uncased-sentiment')
 
-# Load NLTK's Punkt tokenizer for sentence splitting
+# Download and load the NLTK sentence tokenizer
 nltk.download('punkt')
 from nltk.tokenize import sent_tokenize
 
-def tokenize_and_classify(content):
-    # Split the content into sentences using NLTK
+def process_content(content, max_tokens):
     sentences = sent_tokenize(content)
+    grouped_text = ""
+    first_sentence = None
+    last_sentence = ""
     for sentence in sentences:
-        tokens = tokenizer.encode(sentence, add_special_tokens=True)
-        # Check if the tokens exceed the maximum allowed, and skip if they do
-        if len(tokens) <= 512:
-            yield sentence, tokens
+        # Check if adding this sentence stays within the token limit
+        new_group = grouped_text + " " + sentence if grouped_text else sentence
+        if len(tokenizer.encode(new_group, add_special_tokens=True)) > max_tokens:
+            # If adding exceeds the limit, process the current group if it exists
+            if grouped_text:
+                yield first_sentence, last_sentence, grouped_text
+            grouped_text = sentence  # Start a new group with the current sentence
+            first_sentence = sentence
+            last_sentence = sentence
+        else:
+            # If within limit, add to current group
+            grouped_text = new_group
+            last_sentence = sentence
+    # Yield the last group if it exists
+    if grouped_text:
+        yield first_sentence, last_sentence, grouped_text
 
-def classify_tokens(tokens):
+def classify_tokens(text):
+    tokens = tokenizer.encode(text, add_special_tokens=True)
     input_ids = torch.tensor([tokens]).to(model.device)
     with torch.no_grad():
         output = model(input_ids)
-    probabilities = torch.softmax(output.logits, dim=1)
-    return probabilities.argmax(dim=1).item()
+    return output.logits.argmax(dim=1).item()
 
 # Directory path to the text files
 directory_path = '/Users/philip/Desktop/Code/Sentiment/data'
@@ -41,9 +55,9 @@ for filename in os.listdir(directory_path):
         with open(file_path, 'r') as file:
             content = file.read()
             print(f"----File: {filename}----")
-            for text_snippet, tokens in tokenize_and_classify(content):
-                label = classify_tokens(tokens)
-                print(f"Sentiment Score: {label}")
-                print(f"Text Snippet: {text_snippet}\n")
-            print("_" * 50)  # Prints a line of underscores after each file's output
-            print("\n")
+            for first, last, group in process_content(content, 500):
+                sentiment_score = classify_tokens(group)
+                print(f"Sentiment Score: {sentiment_score}")
+                print(f"First Sentence: {first}")
+                print(f"Last Sentence: {last}\n")
+            print("_" * 50 + "\n")
