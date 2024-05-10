@@ -72,41 +72,50 @@ def plot_sentiment_scores(scores):
 
 def main():
     st.title('Sentiment Analysis Tool')
-    data_path = '/Users/philip/Desktop/Code/Sentiment/data'
-    files_content = load_data(data_path)
 
-    if files_content:
-        selected_file = st.selectbox('Choose a file to analyze:', list(files_content.keys()))
-        if st.button('Analyze'):
-            sentences, scores = perform_sentiment_analysis(files_content[selected_file])
-            st.write("Annotated Sentences:")  # Header before displaying annotated text
+    uploaded_files = st.file_uploader("Upload Files", type=['txt'], accept_multiple_files=True)
 
-            # Prepare the containers for text and the line chart
-            col1, col2 = st.columns([2, 3])  # Adjust column width ratios as needed
+    if uploaded_files:
+        # Process uploaded files
+        files_content = {}
+        for file in uploaded_files:
+            filename = file.name
+            file_content = file.getvalue().decode("utf-8")
+            files_content[filename] = file_content
 
-            full_text = ""  # Initialize empty string to accumulate text
-            all_scores = []  # List to store scores for plotting
+        if files_content:
+            selected_file = st.selectbox('Choose a file to analyze:', list(files_content.keys()))
+            if st.button('Analyze'):
+                # Perform sentiment analysis
+                sentences, scores = perform_sentiment_analysis(files_content[selected_file])
+                st.write("Annotated Sentences:")  # Header before displaying annotated text
 
-            # Streaming text and plotting in columns
-            with col1:
-                text_container = st.empty()  # Container for streaming text
-            with col2:
-                chart_container = st.empty()  # Container for the line chart
+                # Prepare the containers for text and the line chart
+                col1, col2 = st.columns([2, 3])  # Adjust column width ratios as needed
 
-            # Iterate through text and scores, updating UI elements
-            for sentence, score in zip(sentences, scores):
-                color = determine_color(score)
-                html_text = f"<span style='background-color:{color};'>{sentence}</span> "
-                full_text += html_text
-                all_scores.append(score)
-                
+                full_text = ""  # Initialize empty string to accumulate text
+                all_scores = []  # List to store scores for plotting
+
+                # Streaming text and plotting in columns
                 with col1:
-                    text_container.markdown(full_text, unsafe_allow_html=True)
+                    text_container = st.empty()  # Container for streaming text
                 with col2:
-                    update_line_chart(chart_container, all_scores)
+                    chart_container = st.empty()  # Container for the line chart
 
-                import time
-                time.sleep(0.1)  # Simulate delay for streaming effect
+                # Iterate through text and scores, updating UI elements
+                for sentence, score in zip(sentences, scores):
+                    color = determine_color(score)
+                    html_text = f"<span style='background-color:{color};'>{sentence}</span> "
+                    full_text += html_text
+                    all_scores.append(score)
+
+                    with col1:
+                        text_container.markdown(full_text, unsafe_allow_html=True)
+                    with col2:
+                        update_line_chart(chart_container, all_scores)
+
+                    import time
+                    time.sleep(0.1)  # Simulate delay for streaming effect
 
 
 def stream_annotated_text(sentences, scores):
