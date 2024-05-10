@@ -20,15 +20,9 @@ warnings.filterwarnings("ignore", category=FutureWarning)
 # Load NLTK's Punkt tokenizer for sentence splitting if you havent already
 #nltk.download('punkt', quiet=True)
 
+tokenizer = BertTokenizer.from_pretrained('nlptown/bert-base-multilingual-uncased-sentiment')
+model = BertForSequenceClassification.from_pretrained('nlptown/bert-base-multilingual-uncased-sentiment')
 
-@st.cache_data()
-def load_model():
-    """Load and cache the tokenizer and BERT model."""
-    tokenizer = BertTokenizer.from_pretrained('nlptown/bert-base-multilingual-uncased-sentiment')
-    model = BertForSequenceClassification.from_pretrained('nlptown/bert-base-multilingual-uncased-sentiment')
-    return tokenizer, model
-
-tokenizer, model = load_model()
 
 @st.cache_data
 def load_data(directory):
@@ -72,50 +66,41 @@ def plot_sentiment_scores(scores):
 
 def main():
     st.title('Sentiment Analysis Tool')
+    data_path = '/Users/philip/Desktop/Code/Sentiment/data'
+    files_content = load_data(data_path)
 
-    uploaded_files = st.file_uploader("Upload Files", type=['txt'], accept_multiple_files=True)
+    if files_content:
+        selected_file = st.selectbox('Choose a file to analyze:', list(files_content.keys()))
+        if st.button('Analyze'):
+            sentences, scores = perform_sentiment_analysis(files_content[selected_file])
+            st.write("Annotated Sentences:")  # Header before displaying annotated text
 
-    if uploaded_files:
-        # Process uploaded files
-        files_content = {}
-        for file in uploaded_files:
-            filename = file.name
-            file_content = file.getvalue().decode("utf-8")
-            files_content[filename] = file_content
+            # Prepare the containers for text and the line chart
+            col1, col2 = st.columns([2, 3])  # Adjust column width ratios as needed
 
-        if files_content:
-            #selected_file = st.selectbox('Choose a file to analyze:', list(files_content.keys()))
-            if st.button('Analyze'):
-                # Perform sentiment analysis
-                sentences, scores = perform_sentiment_analysis(files_content[selected_file])
-                st.write("Annotated Sentences:")  # Header before displaying annotated text
+            full_text = ""  # Initialize empty string to accumulate text
+            all_scores = []  # List to store scores for plotting
 
-                # Prepare the containers for text and the line chart
-                col1, col2 = st.columns([2, 3])  # Adjust column width ratios as needed
+            # Streaming text and plotting in columns
+            with col1:
+                text_container = st.empty()  # Container for streaming text
+            with col2:
+                chart_container = st.empty()  # Container for the line chart
 
-                full_text = ""  # Initialize empty string to accumulate text
-                all_scores = []  # List to store scores for plotting
-
-                # Streaming text and plotting in columns
+            # Iterate through text and scores, updating UI elements
+            for sentence, score in zip(sentences, scores):
+                color = determine_color(score)
+                html_text = f"<span style='background-color:{color};'>{sentence}</span> "
+                full_text += html_text
+                all_scores.append(score)
+                
                 with col1:
-                    text_container = st.empty()  # Container for streaming text
+                    text_container.markdown(full_text, unsafe_allow_html=True)
                 with col2:
-                    chart_container = st.empty()  # Container for the line chart
+                    update_line_chart(chart_container, all_scores)
 
-                # Iterate through text and scores, updating UI elements
-                for sentence, score in zip(sentences, scores):
-                    color = determine_color(score)
-                    html_text = f"<span style='background-color:{color};'>{sentence}</span> "
-                    full_text += html_text
-                    all_scores.append(score)
-
-                    with col1:
-                        text_container.markdown(full_text, unsafe_allow_html=True)
-                    with col2:
-                        update_line_chart(chart_container, all_scores)
-
-                    import time
-                    time.sleep(0.1)  # Simulate delay for streaming effect
+                import time
+                time.sleep(0.1)  # Simulate delay for streaming effect
 
 
 def stream_annotated_text(sentences, scores):
