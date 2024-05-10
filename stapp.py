@@ -1,47 +1,42 @@
+# sentiment_streamlit_app.py
 import streamlit as st
+import os
 import matplotlib.pyplot as plt
+from transformers import BertTokenizer, BertForSequenceClassification, DistilBertTokenizer, DistilBertForSequenceClassification, RobertaTokenizer, RobertaForSequenceClassification, XLNetTokenizer, XLNetForSequenceClassification, ElectraTokenizer, ElectraForSequenceClassification, GPT2Tokenizer, GPT2LMHeadModel
 import torch
 import numpy as np
 import nltk
 from nltk.tokenize import sent_tokenize
-import requests
-from transformers import BertTokenizer, BertForSequenceClassification
+from annotated_text import annotated_text
 import warnings
+from streamlit_extras.streaming_write import write
 
-# Set up the page configuration and suppress warnings
+
 st.set_page_config(layout="wide")
+
+# Suppress specific FutureWarnings
 warnings.filterwarnings("ignore", category=FutureWarning)
 
-@st.cache_data(show_spinner=False)
-def get_github_files(user, repo, path):
-    """Fetches filenames and their download URLs from a GitHub repo."""
-    url = f"https://api.github.com/repos/{user}/{repo}/contents/{path}"
-    headers = {'User-Agent': 'AppName/1.0'}
-    response = requests.get(url, headers=headers)
-    if response.status_code == 200:
-        files = response.json()
-        return {file['name']: file['download_url'] for file in files if file['name'].endswith('.txt')}
-    else:
-        st.error(f"Failed to fetch files, status code: {response.status_code}")
-        return {}
+# Load NLTK's Punkt tokenizer for sentence splitting if you havent already
+#nltk.download('punkt', quiet=True)
+
+tokenizer = BertTokenizer.from_pretrained('nlptown/bert-base-multilingual-uncased-sentiment')
+model = BertForSequenceClassification.from_pretrained('nlptown/bert-base-multilingual-uncased-sentiment')
+
 
 @st.cache_data
-def load_data_from_url(url):
-    """Loads text content directly from a provided URL."""
-    response = requests.get(url)
-    return response.text if response.status_code == 200 else "Error: Unable to retrieve data"
-
-@st.cache_data()
-def load_model():
-    """Load and cache the tokenizer and BERT model."""
-    tokenizer = BertTokenizer.from_pretrained('nlptown/bert-base-multilingual-uncased-sentiment')
-    model = BertForSequenceClassification.from_pretrained('nlptown/bert-base-multilingual-uncased-sentiment')
-    return tokenizer, model
-
-tokenizer, model = load_model()
+def load_data(directory):
+    """Loads text files from a directory and returns a dictionary of filename and content."""
+    files_content = {}
+    for filename in os.listdir(directory):
+        if filename.endswith('.txt'):
+            file_path = os.path.join(directory, filename)
+            with open(file_path, 'r') as file:
+                files_content[filename] = file.read()
+    return files_content
 
 def perform_sentiment_analysis(text):
-    """Performs sentiment analysis and returns a list of sentiment scores."""
+    """Performs sentiment analysis on the provided text and returns a list of sentiment scores."""
     sentences = sent_tokenize(text)
     scores = []
     for sentence in sentences:
@@ -50,60 +45,91 @@ def perform_sentiment_analysis(text):
             input_ids = torch.tensor([tokens]).to('cpu')
             with torch.no_grad():
                 output = model(input_ids)
-            scores.append(output.logits.argmax(dim=1).item())
+            score = output.logits.argmax(dim=1).item()
+            scores.append(score)
     return sentences, scores
 
 def plot_sentiment_scores(scores):
     """Plots a line chart of sentiment scores with a moving average."""
-    ma_scores = np.convolve(scores, np.ones(5)/5, mode='valid')
+    ma_scores = np.convolve(scores, np.ones(5)/5, mode='valid')  # Moving average
     plt.figure(figsize=(10, 5))
     plt.plot(ma_scores, 'g-', label='Moving Average (window 5)')
     plt.title('Sentiment Analysis Trends')
     plt.xlabel('Sentence Number')
-    plt.ylabel('Sentiment Score (Moving Average)')
-    plt.ylim(0, 4)
+    plt.ylabel('Sentiment Score')
+    plt.ylim(0, 4)  # Set y-axis to show the full range of scores
     plt.grid(True)
     st.pyplot(plt)
 
+
+
+
 def main():
     st.title('Sentiment Analysis Tool')
-    user, repo, path = 'phisles', 'local-sentiment', 'data'
-    files = get_github_files(user, repo, path)
+    data_path = '/Users/philip/Desktop/Code/Sentiment/data'
+    files_content = load_data(data_path)
 
-    if files:
-        selected_file = st.selectbox('Choose a file to analyze:', list(files.keys()))
-        file_url = files[selected_file]  # Correctly use the direct download URL
-        file_content = load_data_from_url(file_url)
+    if files_content:
+        selected_file = st.selectbox('Choose a file to analyze:', list(files_content.keys()))
+        if st.button('Analyze'):
+            sentences, scores = perform_sentiment_analysis(files_content[selected_file])
+            st.write("Annotated Sentences:")  # Header before displaying annotated text
 
-        if st.button('Analyze') and file_content:
-            sentences, scores = perform_sentiment_analysis(file_content)
-            st.write("Annotated Sentences:")
+            # Prepare the containers for text and the line chart
+            col1, col2 = st.columns([2, 3])  # Adjust column width ratios as needed
 
-            col1, col2 = st.columns([2, 3])
-            full_text = ""
-            all_scores = []
+            full_text = ""  # Initialize empty string to accumulate text
+            all_scores = []  # List to store scores for plotting
 
+            # Streaming text and plotting in columns
+            with col1:
+                text_container = st.empty()  # Container for streaming text
+            with col2:
+                chart_container = st.empty()  # Container for the line chart
+
+            # Iterate through text and scores, updating UI elements
             for sentence, score in zip(sentences, scores):
-                full_text += f"<span style='background-color:{determine_color(score)};'>{sentence}</span> "
+                color = determine_color(score)
+                html_text = f"<span style='background-color:{color};'>{sentence}</span> "
+                full_text += html_text
                 all_scores.append(score)
+                
                 with col1:
-                    st.markdown(full_text, unsafe_allow_html=True)
+                    text_container.markdown(full_text, unsafe_allow_html=True)
                 with col2:
-                    plot_sentiment_scores(all_scores)
+                    update_line_chart(chart_container, all_scores)
 
-            import time
-            time.sleep(0.2)  # Add delay to simulate streaming
-    else:
-        st.write("No files found. Please check the repository or path.")
+                import time
+                time.sleep(0.1)  # Simulate delay for streaming effect
+
+
+def stream_annotated_text(sentences, scores):
+    """Generator function to create HTML styled text and scores for streaming."""
+    for sentence, score in zip(sentences, scores):
+        color = determine_color(score)
+        html_text = f"<span style='background-color:{color};'>{sentence}</span> "
+        yield html_text, score  # Yield both text and score for use in the main loop
 
 def determine_color(score):
-    """Determines color based on sentiment score."""
+    """Determine color based on score."""
     return ("rgba(255, 77, 77, 0.6)" if score == 0 else
             "rgba(255, 182, 193, 0.6)" if score == 1 else
             "" if score == 2 else
             "rgba(144, 238, 144, 0.6)" if score == 3 else
             "rgba(0, 100, 0, 0.6)" if score == 4 else
             "rgba(77, 77, 255, 0.6)")
+
+def update_line_chart(container, scores):
+    """Update the line chart with the moving average of sentiment scores."""
+    ma_scores = np.convolve(scores, np.ones(5)/5, mode='valid')  # Calculate moving average
+    plt.figure(figsize=(10, 5))
+    plt.plot(ma_scores, 'g-', label='Moving Average (window 5)')
+    plt.title('Sentiment Analysis Trends')
+    plt.xlabel('Sentence Number')
+    plt.ylabel('Sentiment Score')
+    plt.ylim(0, 4)  # Set y-axis to show the full range of scores
+    plt.grid(True)
+    container.pyplot(plt)
 
 if __name__ == "__main__":
     main()
