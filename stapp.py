@@ -70,15 +70,26 @@ def plot_sentiment_scores(scores):
 
 
 
+import requests
+
+@st.cache
+def load_data_from_url(url):
+    """Loads text content directly from a provided URL."""
+    response = requests.get(url)
+    if response.status_code == 200:
+        return response.text
+    else:
+        return "Error: Unable to retrieve data"
+
 def main():
     st.title('Sentiment Analysis Tool')
-    data_path = 'https://raw.githubusercontent.com/phisles/local-sentiment/main/data/Body%20Cam%203.txt'
-    files_content = load_data(data_path)
+    data_url = 'https://raw.githubusercontent.com/phisles/local-sentiment/main/data/Body%20Cam%203.txt'
+    file_content = load_data_from_url(data_url)
 
-    if files_content:
-        selected_file = st.selectbox('Choose a file to analyze:', list(files_content.keys()))
+    if file_content:
+        selected_file = st.selectbox('Choose a file to analyze:', list(file_content.keys()))
         if st.button('Analyze'):
-            sentences, scores = perform_sentiment_analysis(files_content[selected_file])
+            sentences, scores = perform_sentiment_analysis(file_content[selected_file])
             st.write("Annotated Sentences:")  # Header before displaying annotated text
 
             # Prepare the containers for text and the line chart
