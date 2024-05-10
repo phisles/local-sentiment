@@ -71,29 +71,38 @@ def main():
     user, repo, path = 'phisles', 'local-sentiment', 'data'
     files = get_github_files(user, repo, path)
 
+    # Debugging output
+    st.write("Fetched files:", files)  # See what files are being fetched
+
     if files:
         selected_file = st.selectbox('Choose a file to analyze:', files)
         file_url = f"https://raw.githubusercontent.com/{user}/{repo}/main/{path}/{selected_file}"
         file_content = load_data_from_url(file_url)
 
-        if st.button('Analyze') and file_content:
-            sentences, scores = perform_sentiment_analysis(file_content)
-            st.write("Annotated Sentences:")  # Display the header
+        # Button to trigger analysis
+        if st.button('Analyze'):
+            if file_content:  # Check if file content is correctly fetched
+                sentences, scores = perform_sentiment_analysis(file_content)
+                st.write("Annotated Sentences:")  # Display the header
 
-            col1, col2 = st.columns([2, 3])  # Set up columns for text and graph
-            full_text = ""  # Initialize text accumulation
-            all_scores = []  # List to store scores for plotting
+                col1, col2 = st.columns([2, 3])  # Set up columns for text and graph
+                full_text = ""  # Initialize text accumulation
+                all_scores = []  # List to store scores for plotting
 
-            for sentence, score in zip(sentences, scores):
-                full_text += f"<span style='background-color:{determine_color(score)};'>{sentence}</span> "
-                all_scores.append(score)
-                with col1:
-                    st.markdown(full_text, unsafe_allow_html=True)
-                with col2:
-                    plot_sentiment_scores(all_scores)
+                for sentence, score in zip(sentences, scores):
+                    full_text += f"<span style='background-color:{determine_color(score)};'>{sentence}</span> "
+                    all_scores.append(score)
+                    with col1:
+                        st.markdown(full_text, unsafe_allow_html=True)
+                    with col2:
+                        plot_sentiment_scores(all_scores)
 
-                import time
-                time.sleep(0.2)  # Add delay to simulate streaming
+                    import time
+                    time.sleep(0.2)  # Add delay to simulate streaming
+            else:
+                st.write("Error loading file content.")
+    else:
+        st.write("No files found or API call failed.")
 
 def determine_color(score):
     """Determines color based on sentiment score."""
