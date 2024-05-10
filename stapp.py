@@ -62,6 +62,7 @@ def plot_sentiment_scores(scores):
     plt.grid(True)
     st.pyplot(plt)
 
+logging.info("Starting the application...")
 def main():
     st.title('Sentiment Analysis Tool')
     uploaded_files = st.file_uploader("Upload Files", type=['txt'], accept_multiple_files=True)
@@ -128,4 +129,6 @@ def update_line_chart(container, scores):
     container.pyplot(plt)
 
 if __name__ == "__main__":
+    logging.info("Executing the main function...")
     main()
+    logging.info("Application execution completed.")
