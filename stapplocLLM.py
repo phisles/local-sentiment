@@ -1,24 +1,34 @@
+# sentiment_streamlit_app.py
 import streamlit as st
 import os
 import matplotlib.pyplot as plt
-from transformers import BertTokenizer, BertForSequenceClassification
+from transformers import BertTokenizer, BertForSequenceClassification, DistilBertTokenizer, DistilBertForSequenceClassification, RobertaTokenizer, RobertaForSequenceClassification, XLNetTokenizer, XLNetForSequenceClassification, ElectraTokenizer, ElectraForSequenceClassification, GPT2Tokenizer, GPT2LMHeadModel
 import torch
 import numpy as np
 import nltk
 from nltk.tokenize import sent_tokenize
+from annotated_text import annotated_text
 import warnings
-import requests
-import json
+from streamlit_extras.streaming_write import write
+import ollama
 import time
 
+
 st.set_page_config(layout="wide")
+
+# Suppress specific FutureWarnings
 warnings.filterwarnings("ignore", category=FutureWarning)
+
+# Load NLTK's Punkt tokenizer for sentence splitting if you havent already
+#nltk.download('punkt', quiet=True)
 
 tokenizer = BertTokenizer.from_pretrained('nlptown/bert-base-multilingual-uncased-sentiment')
 model = BertForSequenceClassification.from_pretrained('nlptown/bert-base-multilingual-uncased-sentiment')
 
+
 @st.cache_data
 def load_data(directory):
+    """Loads text files from a directory and returns a dictionary of filename and content."""
     files_content = {}
     for filename in os.listdir(directory):
         if filename.endswith('.txt'):
@@ -28,6 +38,7 @@ def load_data(directory):
     return files_content
 
 def perform_sentiment_analysis(text):
+    """Performs sentiment analysis on the provided text and returns a list of sentiment scores."""
     sentences = sent_tokenize(text)
     scores = []
     for sentence in sentences:
@@ -38,21 +49,36 @@ def perform_sentiment_analysis(text):
                 output = model(input_ids)
             score = output.logits.argmax(dim=1).item()
             scores.append(score)
+
+    print(scores)
     return sentences, scores
 
-def determine_color(score):
-    return ("rgba(255, 77, 77, 0.6)" if score == 0 else
-            "rgba(255, 182, 193, 0.6)" if score == 1 else
-            "" if score == 2 else
-            "rgba(144, 238, 144, 0.6)" if score == 3 else
-            "rgba(0, 100, 0, 0.6)" if score == 4 else
-            "rgba(77, 77, 255, 0.6)")
+def plot_sentiment_scores(scores):
+    """Plots a line chart of sentiment scores with a moving average."""
+    ma_scores = np.convolve(scores, np.ones(5)/5, mode='valid')  # Moving average
+    plt.figure(figsize=(10, 5))
+    plt.plot(ma_scores, 'g-', label='Moving Average (window 5)')
+    plt.title('Sentiment Analysis Trends')
+    plt.xlabel('Sentence Number')
+    plt.ylabel('Sentiment Score')
+    plt.ylim(0, 4)  # Set y-axis to show the full range of scores
+    plt.grid(True)
+    st.pyplot(plt)
 
-def stream_annotated_text(sentences, scores):
-    for sentence, score in zip(sentences, scores):
-        color = determine_color(score)
-        html_text = f"<span style='background-color:{color};'>{sentence}</span> "
-        yield html_text, score
+def generate_feedback(sentences, scores):
+    # Prepare the combined text
+    combined_text = ". ".join([f"{sentence} [Score: {score}]" for sentence, score in zip(sentences, scores)])
+    prompt_text = f"Analyze the following sentences and their sentiment scores: {combined_text}. Provide overall sentiment analysis and suggestions for improvement."
+
+    # Sending the prompt to LLaMA
+    response = ollama.chat(
+        model='llama3',
+        messages=[{'role': 'user', 'content': prompt_text}]
+    )
+
+    # Extracting the content from the response
+    return response['message']['content']
+
 
 def main():
     st.title('Sentiment Analysis Tool')
@@ -63,38 +89,62 @@ def main():
         selected_file = st.selectbox('Choose a file to analyze:', list(files_content.keys()))
         if st.button('Analyze'):
             sentences, scores = perform_sentiment_analysis(files_content[selected_file])
-            col1, col2, col3 = st.columns([2, 3, 2])  # Create three columns
+            col1, col2, col3 = st.columns([2, 3, 2])  # Adjust column width ratios as needed
 
-            text_stream = stream_annotated_text(sentences, scores)
-            text_container = col1.empty()
-            chart_container = col2.empty()
-            feedback_container = col3.empty()
-            feedback_container.write("Feedback and Suggestions:")
+            text_container = col1.empty()  # Container for streaming text
+            chart_container = col2.empty()  # Container for the line chart
+            feedback_container = col3.empty()  # Container for feedback
 
-            full_text = ""
-            all_scores = []
+            full_text = ""  # Initialize empty string to accumulate text
+            all_scores = []  # List to store scores for plotting
 
-            for html_text, score in text_stream:
-                full_text += html_text
+            for i, (sentence, score) in enumerate(zip(sentences, scores)):
+                color = determine_color(score)
+                full_text += f"<span style='background-color:{color};'>{sentence}</span> "
                 all_scores.append(score)
 
                 text_container.markdown(full_text, unsafe_allow_html=True)
-                
-                if len(all_scores) >= 5:  # Update chart if we have enough data to start moving average
-                    ma_scores = np.convolve(all_scores, np.ones(5)/5, mode='valid')
-                    plt.figure(figsize=(10, 5))
-                    plt.plot(ma_scores, 'g-', label='Moving Average (window 5)')
-                    plt.title('Sentiment Analysis Trends')
-                    plt.xlabel('Sentence Number')
-                    plt.ylabel('Sentiment Score')
-                    plt.ylim(0, 4)
-                    plt.grid(True)
-                    chart_container.pyplot(plt)
+                update_line_chart(chart_container, all_scores)
 
-                feedback_html_text = f"<span style='background-color:{determine_color(2)};'>Feedback coming here...</span> "
-                feedback_container.markdown(feedback_html_text, unsafe_allow_html=True)  # Example of streaming feedback
+            # Generate feedback only once after all sentences are processed
+            feedback = generate_feedback(sentences, all_scores)
+            
+            # Stream feedback
+            feedback_words = feedback.split()  # Split feedback into words
+            streamed_feedback = ""
+            for word in feedback_words:
+                streamed_feedback += word + ' '  # Add one word at a time
+                feedback_container.markdown(streamed_feedback, unsafe_allow_html=True)
+                time.sleep(0.025)  # Adjust time as necessary for faster streaming effect
 
-                time.sleep(0.1)  # Simulate delay for streaming effect
+
+def stream_annotated_text(sentences, scores):
+    """Generator function to create HTML styled text and scores for streaming."""
+    for sentence, score in zip(sentences, scores):
+        color = determine_color(score)
+        html_text = f"<span style='background-color:{color};'>{sentence}</span> "
+        yield html_text, score  # Yield both text and score for use in the main loop
+
+def determine_color(score):
+    """Determine color based on score."""
+    return ("rgba(255, 77, 77, 0.6)" if score == 0 else
+            "rgba(255, 182, 193, 0.6)" if score == 1 else
+            "" if score == 2 else
+            "rgba(144, 238, 144, 0.6)" if score == 3 else
+            "rgba(0, 100, 0, 0.6)" if score == 4 else
+            "rgba(77, 77, 255, 0.6)")
+
+def update_line_chart(container, scores):
+    """Update the line chart with the moving average of sentiment scores."""
+    ma_scores = np.convolve(scores, np.ones(5)/5, mode='valid')  # Calculate moving average
+    plt.figure(figsize=(10, 5))
+    plt.plot(ma_scores, 'g-', label='Moving Average (window 5)')
+    plt.title('Sentiment Analysis Trends')
+    plt.xlabel('Sentence Number')
+    plt.ylabel('Sentiment Score')
+    plt.ylim(0, 4)  # Set y-axis to show the full range of scores
+    plt.grid(True)
+    container.pyplot(plt)
 
 if __name__ == "__main__":
     main()
