@@ -7,9 +7,10 @@ import nltk
 from nltk.tokenize import sent_tokenize
 from annotated_text import annotated_text
 import warnings
+import logging
 
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 st.set_page_config(layout="wide")
-
 # Suppress specific FutureWarnings
 warnings.filterwarnings("ignore", category=FutureWarning)
 
@@ -23,7 +24,9 @@ def load_model():
     model = BertForSequenceClassification.from_pretrained('nlptown/bert-base-multilingual-uncased-sentiment')
     return tokenizer, model
 
+logging.info("Model loading started...")
 tokenizer, model = load_model()
+logging.info("Model loaded successfully.")
 
 @st.cache_data
 def load_data(files):
@@ -64,12 +67,16 @@ def main():
     uploaded_files = st.file_uploader("Upload Files", type=['txt'], accept_multiple_files=True)
 
     if uploaded_files:
+        logging.info("Loading data...")
         files_content = load_data({file.name: file.getvalue() for file in uploaded_files})
+        logging.info("Data loaded successfully.")
 
         if files_content:
             selected_file = st.selectbox('Choose a file to analyze:', list(files_content.keys()))
             if st.button('Analyze'):
+                logging.info("Performing sentiment analysis...")
                 sentences, scores = perform_sentiment_analysis(files_content[selected_file])
+                logging.info("Sentiment analysis completed.")
                 st.write("Annotated Sentences:")  # Header before displaying annotated text
 
                 # Prepare the containers for text and the line chart
