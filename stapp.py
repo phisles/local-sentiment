@@ -13,23 +13,26 @@ st.set_page_config(layout="wide")
 warnings.filterwarnings("ignore", category=FutureWarning)
 
 # Cache the function to get filenames from GitHub
-@st.cache
+@st.cache_data(show_spinner=True)
 def get_github_files(user, repo, path):
     """Fetches filenames in a specific path from a GitHub repo."""
     url = f"https://api.github.com/repos/{user}/{repo}/contents/{path}"
     response = requests.get(url)
     if response.status_code == 200:
         files = response.json()
-        return [file['name'] for file in files if file['name'].endswith('.txt')]
+        file_names = [file['name'] for file in files if file['name'].endswith('.txt')]
+        return file_names
     else:
+        st.error(f"Failed to fetch files, status code: {response.status_code}")
         return []
 
-# Cache the function to load data from URL
-@st.cache
+
+@st.cache_data
 def load_data_from_url(url):
     """Loads text content directly from a provided URL."""
     response = requests.get(url)
     return response.text if response.status_code == 200 else "Error: Unable to retrieve data"
+
 
 # Cache the model loading for efficiency
 @st.cache(allow_output_mutation=True)
@@ -71,39 +74,32 @@ def main():
     user, repo, path = 'phisles', 'local-sentiment', 'data'
     files = get_github_files(user, repo, path)
 
-    # Debugging output
-    st.write("Fetched files:", files)  # See what files are being fetched
-
     if files:
         selected_file = st.selectbox('Choose a file to analyze:', files)
         file_url = f"https://raw.githubusercontent.com/{user}/{repo}/main/{path}/{selected_file}"
         file_content = load_data_from_url(file_url)
-        st.write("Fetching content from URL:", file_url)
 
-        # Button to trigger analysis
-        if st.button('Analyze'):
-            if file_content:  # Check if file content is correctly fetched
-                sentences, scores = perform_sentiment_analysis(file_content)
-                st.write("Annotated Sentences:")  # Display the header
+        if st.button('Analyze') and file_content:
+            sentences, scores = perform_sentiment_analysis(file_content)
+            st.write("Annotated Sentences:")
 
-                col1, col2 = st.columns([2, 3])  # Set up columns for text and graph
-                full_text = ""  # Initialize text accumulation
-                all_scores = []  # List to store scores for plotting
+            col1, col2 = st.columns([2, 3])
+            full_text = ""
+            all_scores = []
 
-                for sentence, score in zip(sentences, scores):
-                    full_text += f"<span style='background-color:{determine_color(score)};'>{sentence}</span> "
-                    all_scores.append(score)
-                    with col1:
-                        st.markdown(full_text, unsafe_allow_html=True)
-                    with col2:
-                        plot_sentiment_scores(all_scores)
+            for sentence, score in zip(sentences, scores):
+                full_text += f"<span style='background-color:{determine_color(score)};'>{sentence}</span> "
+                all_scores.append(score)
+                with col1:
+                    st.markdown(full_text, unsafe_allow_html=True)
+                with col2:
+                    plot_sentiment_scores(all_scores)
 
-                    import time
-                    time.sleep(0.2)  # Add delay to simulate streaming
-            else:
-                st.write("Error loading file content.")
+            import time
+            time.sleep(0.2)  # Add delay to simulate streaming
     else:
-        st.write("No files found or API call failed.")
+        st.write("No files found. Please check the repository or path.")
+
 
 def determine_color(score):
     """Determines color based on sentiment score."""
