@@ -2,7 +2,7 @@
 import streamlit as st
 import os
 import matplotlib.pyplot as plt
-from transformers import BertTokenizer, BertForSequenceClassification, DistilBertTokenizer, DistilBertForSequenceClassification, RobertaTokenizer, RobertaForSequenceClassification, XLNetTokenizer, XLNetForSequenceClassification, ElectraTokenizer, ElectraForSequenceClassification, GPT2Tokenizer, GPT2LMHeadModel
+from transformers import BertTokenizer, BertForSequenceClassification
 import torch
 import numpy as np
 import nltk
