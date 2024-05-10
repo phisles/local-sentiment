@@ -78,6 +78,7 @@ def main():
         selected_file = st.selectbox('Choose a file to analyze:', files)
         file_url = f"https://raw.githubusercontent.com/{user}/{repo}/main/{path}/{selected_file}"
         file_content = load_data_from_url(file_url)
+        st.write("Fetching content from URL:", file_url)
 
         # Button to trigger analysis
         if st.button('Analyze'):
