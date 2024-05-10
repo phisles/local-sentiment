@@ -21,7 +21,7 @@ warnings.filterwarnings("ignore", category=FutureWarning)
 #nltk.download('punkt', quiet=True)
 
 
-@st.cache(allow_output_mutation=True)
+@st.cache_data()
 def load_model():
     """Load and cache the tokenizer and BERT model."""
     tokenizer = BertTokenizer.from_pretrained('nlptown/bert-base-multilingual-uncased-sentiment')
@@ -29,10 +29,6 @@ def load_model():
     return tokenizer, model
 
 tokenizer, model = load_model()
-
-# Rest of your code remains the same
-
-
 
 @st.cache_data
 def load_data(directory):
