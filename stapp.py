@@ -11,6 +11,9 @@ from annotated_text import annotated_text
 import warnings
 from streamlit_extras.streaming_write import write
 
+
+st.set_page_config(layout="wide")
+
 # Suppress specific FutureWarnings
 warnings.filterwarnings("ignore", category=FutureWarning)
 
@@ -58,23 +61,7 @@ def plot_sentiment_scores(scores):
     plt.grid(True)
     st.pyplot(plt)
 
-def display_annotated_text(sentences, scores):
-    annotated_results = []
-    for sentence, score in zip(sentences, scores):
-        if score == 0:
-            color = "rgba(255, 77, 77, 0.6)"  # Red for the most negative sentiment
-        elif score == 1:
-            color = "rgba(255, 182, 193, 0.6)"  # Pink for slightly negative sentiment
-        elif score == 2:
-            color = ""  # No background color for neutral sentiment
-        elif score == 3:
-            color = "rgba(144, 238, 144, 0.6)"  # Light Green for positive sentiment
-        elif score == 4:
-            color = "rgba(0, 100, 0, 0.6)"  # Dark Green for the most positive sentiment
-        else:
-            color = "rgba(77, 77, 255, 0.6)"  # Default blue for any scores out of expected range
-        annotated_results.append((sentence, "", color))
-    annotated_text(*annotated_results)
+
 
 
 def main():
@@ -86,11 +73,67 @@ def main():
         selected_file = st.selectbox('Choose a file to analyze:', list(files_content.keys()))
         if st.button('Analyze'):
             sentences, scores = perform_sentiment_analysis(files_content[selected_file])
-            plot_sentiment_scores(scores)  # Display the line chart with moving average
-            st.write("Annotated Sentences:")  # Separator for annotated text
-            display_annotated_text(sentences, scores)  # Display the annotated text
-    else:
-        st.write("No text files found in the directory.")
+            st.write("Annotated Sentences:")  # Header before displaying annotated text
+
+            # Prepare the containers for text and the line chart
+            col1, col2 = st.columns([2, 3])  # Adjust column width ratios as needed
+
+            full_text = ""  # Initialize empty string to accumulate text
+            all_scores = []  # List to store scores for plotting
+
+            # Streaming text and plotting in columns
+            with col1:
+                text_container = st.empty()  # Container for streaming text
+            with col2:
+                chart_container = st.empty()  # Container for the line chart
+
+            # Iterate through text and scores, updating UI elements
+            for sentence, score in zip(sentences, scores):
+                color = determine_color(score)
+                html_text = f"<span style='background-color:{color};'>{sentence}</span> "
+                full_text += html_text
+                all_scores.append(score)
+                
+                with col1:
+                    text_container.markdown(full_text, unsafe_allow_html=True)
+                with col2:
+                    update_line_chart(chart_container, all_scores)
+
+                import time
+                time.sleep(0.1)  # Simulate delay for streaming effect
+
+
+def stream_annotated_text(sentences, scores):
+    """Generator function to create HTML styled text and scores for streaming."""
+    for sentence, score in zip(sentences, scores):
+        color = determine_color(score)
+        html_text = f"<span style='background-color:{color};'>{sentence}</span> "
+        yield html_text, score  # Yield both text and score for use in the main loop
+
+def determine_color(score):
+    """Determine color based on score."""
+    return ("rgba(255, 77, 77, 0.6)" if score == 0 else
+            "rgba(255, 182, 193, 0.6)" if score == 1 else
+            "" if score == 2 else
+            "rgba(144, 238, 144, 0.6)" if score == 3 else
+            "rgba(0, 100, 0, 0.6)" if score == 4 else
+            "rgba(77, 77, 255, 0.6)")
+
+def update_line_chart(container, scores):
+    """Update the line chart with the moving average of sentiment scores."""
+    ma_scores = np.convolve(scores, np.ones(5)/5, mode='valid')  # Calculate moving average
+    plt.figure(figsize=(10, 5))
+    plt.plot(ma_scores, 'g-', label='Moving Average (window 5)')
+    plt.title('Sentiment Analysis Trends')
+    plt.xlabel('Sentence Number')
+    plt.ylabel('Sentiment Score')
+    plt.ylim(0, 4)  # Set y-axis to show the full range of scores
+    plt.grid(True)
+    container.pyplot(plt)
 
 if __name__ == "__main__":
     main()
+
+
+
+
