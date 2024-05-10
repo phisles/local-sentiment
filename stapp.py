@@ -13,15 +13,15 @@ st.set_page_config(layout="wide")
 warnings.filterwarnings("ignore", category=FutureWarning)
 
 # Cache the function to get filenames from GitHub
-@st.cache_data(show_spinner=True)
+@st.cache_data(show_spinner=False)
 def get_github_files(user, repo, path):
     """Fetches filenames in a specific path from a GitHub repo."""
     url = f"https://api.github.com/repos/{user}/{repo}/contents/{path}"
-    response = requests.get(url)
+    headers = {'User-Agent': 'AppName/1.0'}  # You can customize the User-Agent
+    response = requests.get(url, headers=headers)
     if response.status_code == 200:
         files = response.json()
-        file_names = [file['name'] for file in files if file['name'].endswith('.txt')]
-        return file_names
+        return [file['name'] for file in files if file['name'].endswith('.txt')]
     else:
         st.error(f"Failed to fetch files, status code: {response.status_code}")
         return []
