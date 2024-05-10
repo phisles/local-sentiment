@@ -84,7 +84,7 @@ def main():
             files_content[filename] = file_content
 
         if files_content:
-            selected_file = st.selectbox('Choose a file to analyze:', list(files_content.keys()))
+            #selected_file = st.selectbox('Choose a file to analyze:', list(files_content.keys()))
             if st.button('Analyze'):
                 # Perform sentiment analysis
                 sentences, scores = perform_sentiment_analysis(files_content[selected_file])
