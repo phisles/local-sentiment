@@ -12,20 +12,18 @@ import warnings
 st.set_page_config(layout="wide")
 warnings.filterwarnings("ignore", category=FutureWarning)
 
-# Cache the function to get filenames from GitHub
 @st.cache_data(show_spinner=False)
 def get_github_files(user, repo, path):
-    """Fetches filenames in a specific path from a GitHub repo."""
+    """Fetches filenames and their download URLs from a GitHub repo."""
     url = f"https://api.github.com/repos/{user}/{repo}/contents/{path}"
-    headers = {'User-Agent': 'AppName/1.0'}  # You can customize the User-Agent
+    headers = {'User-Agent': 'AppName/1.0'}
     response = requests.get(url, headers=headers)
     if response.status_code == 200:
         files = response.json()
-        return [file['name'] for file in files if file['name'].endswith('.txt')]
+        return {file['name']: file['download_url'] for file in files if file['name'].endswith('.txt')}
     else:
         st.error(f"Failed to fetch files, status code: {response.status_code}")
-        return []
-
+        return {}
 
 @st.cache_data
 def load_data_from_url(url):
@@ -33,8 +31,6 @@ def load_data_from_url(url):
     response = requests.get(url)
     return response.text if response.status_code == 200 else "Error: Unable to retrieve data"
 
-
-# Cache the model loading for efficiency
 @st.cache(allow_output_mutation=True)
 def load_model():
     """Load and cache the tokenizer and BERT model."""
@@ -45,7 +41,7 @@ def load_model():
 tokenizer, model = load_model()
 
 def perform_sentiment_analysis(text):
-    """Performs sentiment analysis on the provided text and returns a list of sentiment scores."""
+    """Performs sentiment analysis and returns a list of sentiment scores."""
     sentences = sent_tokenize(text)
     scores = []
     for sentence in sentences:
@@ -75,8 +71,8 @@ def main():
     files = get_github_files(user, repo, path)
 
     if files:
-        selected_file = st.selectbox('Choose a file to analyze:', files)
-        file_url = f"https://raw.githubusercontent.com/{user}/{repo}/main/{path}/{selected_file}"
+        selected_file = st.selectbox('Choose a file to analyze:', list(files.keys()))
+        file_url = files[selected_file]  # Correctly use the direct download URL
         file_content = load_data_from_url(file_url)
 
         if st.button('Analyze') and file_content:
@@ -100,14 +96,13 @@ def main():
     else:
         st.write("No files found. Please check the repository or path.")
 
-
 def determine_color(score):
     """Determines color based on sentiment score."""
     return ("rgba(255, 77, 77, 0.6)" if score == 0 else
             "rgba(255, 182, 193, 0.6)" if score == 1 else
             "" if score == 2 else
             "rgba(144, 238, 144, 0.6)" if score == 3 else
-            "rgba(0, 100, 0, 0.6)" if score == 4 else
+            "rgba(0, 100, 0, 0.6)" if score is 4 else
             "rgba(77, 77, 255, 0.6)")
 
 if __name__ == "__main__":
