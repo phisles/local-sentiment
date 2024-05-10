@@ -47,6 +47,8 @@ def perform_sentiment_analysis(text):
                 output = model(input_ids)
             score = output.logits.argmax(dim=1).item()
             scores.append(score)
+
+    print(scores)
     return sentences, scores
 
 def plot_sentiment_scores(scores):
