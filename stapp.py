@@ -20,8 +20,14 @@ warnings.filterwarnings("ignore", category=FutureWarning)
 # Load NLTK's Punkt tokenizer for sentence splitting if you havent already
 #nltk.download('punkt', quiet=True)
 
-tokenizer = BertTokenizer.from_pretrained('nlptown/bert-base-multilingual-uncased-sentiment')
-model = BertForSequenceClassification.from_pretrained('nlptown/bert-base-multilingual-uncased-sentiment')
+@st.cache(allow_output_mutation=True)
+def load_model():
+    """Load and cache the tokenizer and BERT model."""
+    tokenizer = BertTokenizer.from_pretrained('nlptown/bert-base-multilingual-uncased-sentiment')
+    model = BertForSequenceClassification.from_pretrained('nlptown/bert-base-multilingual-uncased-sentiment')
+    return tokenizer, model
+
+tokenizer, model = load_model()
 
 
 @st.cache_data
