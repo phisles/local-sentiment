@@ -100,7 +100,7 @@ def main():
                     update_line_chart(chart_container, all_scores)
 
                 import time
-                time.sleep(0.1)  # Simulate delay for streaming effect
+                time.sleep(0.2)  # Simulate delay for streaming effect
 
 
 def stream_annotated_text(sentences, scores):
