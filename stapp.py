@@ -31,7 +31,7 @@ def load_data_from_url(url):
     response = requests.get(url)
     return response.text if response.status_code == 200 else "Error: Unable to retrieve data"
 
-@st.cache_data(allow_output_mutation=True)
+@st.cache_data()
 def load_model():
     """Load and cache the tokenizer and BERT model."""
     tokenizer = BertTokenizer.from_pretrained('nlptown/bert-base-multilingual-uncased-sentiment')
