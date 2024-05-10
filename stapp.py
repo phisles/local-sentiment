@@ -31,7 +31,7 @@ def load_data_from_url(url):
     response = requests.get(url)
     return response.text if response.status_code == 200 else "Error: Unable to retrieve data"
 
-@st.cache(allow_output_mutation=True)
+@st.cache_data(allow_output_mutation=True)
 def load_model():
     """Load and cache the tokenizer and BERT model."""
     tokenizer = BertTokenizer.from_pretrained('nlptown/bert-base-multilingual-uncased-sentiment')
@@ -60,7 +60,7 @@ def plot_sentiment_scores(scores):
     plt.plot(ma_scores, 'g-', label='Moving Average (window 5)')
     plt.title('Sentiment Analysis Trends')
     plt.xlabel('Sentence Number')
-    plt.ylabel('Sentiment Score')
+    plt.ylabel('Sentiment Score (Moving Average)')
     plt.ylim(0, 4)
     plt.grid(True)
     st.pyplot(plt)
