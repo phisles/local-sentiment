@@ -6,6 +6,7 @@ import nltk
 from nltk.tokenize import sent_tokenize
 import requests
 from transformers import BertTokenizer, BertForSequenceClassification
+import warnings
 
 # Set up the page configuration and suppress warnings
 st.set_page_config(layout="wide")
