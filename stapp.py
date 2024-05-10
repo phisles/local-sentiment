@@ -102,7 +102,7 @@ def determine_color(score):
             "rgba(255, 182, 193, 0.6)" if score == 1 else
             "" if score == 2 else
             "rgba(144, 238, 144, 0.6)" if score == 3 else
-            "rgba(0, 100, 0, 0.6)" if score is 4 else
+            "rgba(0, 100, 0, 0.6)" if score == 4 else
             "rgba(77, 77, 255, 0.6)")
 
 if __name__ == "__main__":
