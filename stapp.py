@@ -66,7 +66,7 @@ def plot_sentiment_scores(scores):
 
 def main():
     st.title('Sentiment Analysis Tool')
-    data_path = '/Users/philip/Desktop/Code/Sentiment/data'
+    data_path = 'https://github.com/phisles/local-sentiment/blob/main/data/Body%20Cam%203.txt'
     files_content = load_data(data_path)
 
     if files_content:
