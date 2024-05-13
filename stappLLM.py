@@ -38,7 +38,7 @@ def load_data(files):
         files_content[file_name] = file_content.decode("utf-8")
     return files_content
 
-def perform_sentiment_analysis(text):
+def perform_sentiment_analysis(text, tokenizer, model):
     """Performs sentiment analysis on the provided text and returns a list of sentiment scores."""
     sentences = sent_tokenize(text)
     scores = []
@@ -50,10 +50,8 @@ def perform_sentiment_analysis(text):
                 output = model(input_ids)
             score = output.logits.argmax(dim=1).item()
             scores.append(score)
-
-    #uncomment to view sentiment score output:
-    #print(scores)
     return sentences, scores
+
 
 def plot_sentiment_scores(scores):
     """Plots a line chart of sentiment scores with a moving average."""
@@ -93,17 +91,17 @@ def generate_feedback(sentences, scores):
 
 def main():
     st.title('Sentiment Analysis Tool')
-    uploaded_files = st.file_uploader("Upload Files", type=['txt'], accept_multiple_files=True)
+    tokenizer, model = load_model()  # Load the tokenizer and model only once at the start
 
+    uploaded_files = st.file_uploader("Upload Files", type=['txt'], accept_multiple_files=True)
     if uploaded_files:
-        selected_file = st.selectbox('Choose a file to analyze:', [file.name for file in uploaded_files])
-        file_dict = {file.name: file for file in uploaded_files}
+        file_dict = {file.name: file for file in uploaded_files}  # Create a dictionary from uploaded files
+        selected_file = st.selectbox('Choose a file to analyze:', list(file_dict.keys()))
 
         if st.button('Analyze'):
             file_to_analyze = file_dict[selected_file]
-            file_content = file_to_analyze.getvalue().decode("utf-8")  # Assuming the file content is in UTF-8
-            sentences, scores = perform_sentiment_analysis(file_content)
-            # Proceed with your existing code for displaying results
+            file_content = file_to_analyze.getvalue().decode("utf-8")  # Decode the file content
+            sentences, scores = perform_sentiment_analysis(file_content, tokenizer, model)  # Pass tokenizer and model
 
             col1, col2, col3 = st.columns([2, 3, 2])  # Adjust column width ratios as needed
 
@@ -114,34 +112,27 @@ def main():
             full_text = ""  # Initialize empty string to accumulate text
             all_scores = []  # List to store scores for plotting
 
-            for i, (sentence, score) in enumerate(zip(sentences, scores)):
+            for sentence, score in zip(sentences, scores):
                 color = determine_color(score)
                 full_text += f"<span style='background-color:{color};'>{sentence}</span> "
                 all_scores.append(score)
-
                 text_container.markdown(full_text, unsafe_allow_html=True)
                 update_line_chart(chart_container, all_scores)
 
-                # Generate feedback after processing all sentences
             feedback = generate_feedback(sentences, all_scores)
-
-            # Container for feedback
-            feedback_container = col3.empty()
-
-            # Convert special bullet points to Markdown bullets and ensure proper line breaks
             feedback = feedback.replace('•', '-').replace('\n\n', '\n')  # Replace bullets and manage extra new lines
 
             # Add extra line breaks before each bold section except the first
             parts = feedback.split('**')
             formatted_feedback = parts[0]  # Start with the first part that is before the first bold
-            for part in parts[1:]:  # Loop through parts after the first bold
+            for part in parts[1:]:
                 if formatted_feedback.count('**') % 2 == 0:  # Check if we're at the start of bold text
                     formatted_feedback += '\n**' + part
                 else:
                     formatted_feedback += '**' + part
 
-            # Stream feedback directly (considering it's properly formatted now)
-            feedback_container.markdown(formatted_feedback, unsafe_allow_html=True)
+            feedback_container.markdown(formatted_feedback, unsafe_allow_html=True)  # Stream feedback directly
+
 
 
 
