@@ -20,7 +20,7 @@ st.set_page_config(layout="wide")
 warnings.filterwarnings("ignore", category=FutureWarning)
 
 # Load NLTK's Punkt tokenizer for sentence splitting if you havent already
-#nltk.download('punkt', quiet=True)
+nltk.download('punkt', quiet=True)
 
 @st.cache_resource
 def load_model():
