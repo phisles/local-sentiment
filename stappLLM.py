@@ -89,13 +89,12 @@ def generate_feedback(sentences, scores):
 
 def main():
     st.title('Sentiment Analysis Tool')
-    data_path = '/Users/philip/Desktop/Code/Sentiment/data'
-    files_content = load_data(data_path)
+    uploaded_files = st.file_uploader("Upload Files", type=['txt'], accept_multiple_files=True)
 
-    if files_content:
-        selected_file = st.selectbox('Choose a file to analyze:', list(files_content.keys()))
+    if uploaded_files:
+        selected_file = st.selectbox('Choose a file to analyze:', list(uploaded_files.keys()))
         if st.button('Analyze'):
-            sentences, scores = perform_sentiment_analysis(files_content[selected_file])
+            sentences, scores = perform_sentiment_analysis(uploaded_files[selected_file])
             col1, col2, col3 = st.columns([2, 3, 2])  # Adjust column width ratios as needed
 
             text_container = col1.empty()  # Container for streaming text
