@@ -33,18 +33,23 @@ def load_model():
 
 @st.cache_resource
 def load_llama_model():
-    """Load and cache LLaMA model from Hugging Face."""
+    """Load and cache the LLaMA model from Hugging Face using the API token from Streamlit secrets."""
     model_id = "meta-llama/Meta-Llama-3-8B"
-    # Using torch.bfloat16 for models where reduced precision is acceptable can save memory.
+    # Retrieve the Hugging Face API token securely stored in Streamlit Cloud secrets
+    hf_token = st.secrets["huggingface"]["token"]
+
+    # Initialize the pipeline with the API token for authentication
     pipeline = transformers.pipeline(
-        "text-generation", 
-        model=model_id, 
-        model_kwargs={"torch_dtype": torch.bfloat16}, 
-        device_map="auto"
+        "text-generation",
+        model=model_id,
+        model_kwargs={"torch_dtype": torch.bfloat16},  # Using reduced precision to save memory
+        device_map="auto",  # Automatically use the best available device (GPU or CPU)
+        use_auth_token=hf_token  # Authenticate with the API token
     )
     return pipeline
 
-llama_pipeline = load_llama_model()  # Load the model at the start of your script
+# Load the model using the secure token at the start of your script
+llama_pipeline = load_llama_model()
 
 
 @st.cache_data
