@@ -50,7 +50,8 @@ def perform_sentiment_analysis(text):
             score = output.logits.argmax(dim=1).item()
             scores.append(score)
 
-    print(scores)
+    #uncomment to view sentiment score output:
+    #print(scores)
     return sentences, scores
 
 def plot_sentiment_scores(scores):
@@ -68,7 +69,16 @@ def plot_sentiment_scores(scores):
 def generate_feedback(sentences, scores):
     # Prepare the combined text
     combined_text = ". ".join([f"{sentence} [Score: {score}]" for sentence, score in zip(sentences, scores)])
-    prompt_text = f"Analyze the following sentences and their sentiment scores: {combined_text}. Provide overall sentiment analysis and suggestions for improvement."
+    prompt_text = f"""
+    You are an analyst reviewing transcriptions of body worn cameras and interviews along with sentiment scores for each sentence.
+    Format your response with:
+    - Bullet points for each sentiment analysis observation
+    - Separate paragraphs for summary, sentiment analysis, feedback for officials, and additional insights
+    - Ensure to use concise language
+
+    Here are the sentences and their sentiment scores:
+    {combined_text}
+    """
 
     # Sending the prompt to LLaMA
     response = ollama.chat(
@@ -106,16 +116,30 @@ def main():
                 text_container.markdown(full_text, unsafe_allow_html=True)
                 update_line_chart(chart_container, all_scores)
 
-            # Generate feedback only once after all sentences are processed
+                # Generate feedback after processing all sentences
             feedback = generate_feedback(sentences, all_scores)
-            
-            # Stream feedback
-            feedback_words = feedback.split()  # Split feedback into words
-            streamed_feedback = ""
-            for word in feedback_words:
-                streamed_feedback += word + ' '  # Add one word at a time
-                feedback_container.markdown(streamed_feedback, unsafe_allow_html=True)
-                time.sleep(0.025)  # Adjust time as necessary for faster streaming effect
+
+            # Container for feedback
+            feedback_container = col3.empty()
+
+            # Convert special bullet points to Markdown bullets and ensure proper line breaks
+            feedback = feedback.replace('•', '-').replace('\n\n', '\n')  # Replace bullets and manage extra new lines
+
+            # Add extra line breaks before each bold section except the first
+            parts = feedback.split('**')
+            formatted_feedback = parts[0]  # Start with the first part that is before the first bold
+            for part in parts[1:]:  # Loop through parts after the first bold
+                if formatted_feedback.count('**') % 2 == 0:  # Check if we're at the start of bold text
+                    formatted_feedback += '\n**' + part
+                else:
+                    formatted_feedback += '**' + part
+
+            # Stream feedback directly (considering it's properly formatted now)
+            feedback_container.markdown(formatted_feedback, unsafe_allow_html=True)
+
+
+
+
 
 
 def stream_annotated_text(sentences, scores):
