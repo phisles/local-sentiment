@@ -12,6 +12,8 @@ import warnings
 from streamlit_extras.streaming_write import write
 import ollama
 import time
+import transformers
+import torch 
 
 
 st.set_page_config(layout="wide")
@@ -28,6 +30,21 @@ def load_model():
     tokenizer = BertTokenizer.from_pretrained('nlptown/bert-base-multilingual-uncased-sentiment')
     model = BertForSequenceClassification.from_pretrained('nlptown/bert-base-multilingual-uncased-sentiment')
     return tokenizer, model
+
+@st.cache_resource
+def load_llama_model():
+    """Load and cache LLaMA model from Hugging Face."""
+    model_id = "meta-llama/Meta-Llama-3-8B"
+    # Using torch.bfloat16 for models where reduced precision is acceptable can save memory.
+    pipeline = transformers.pipeline(
+        "text-generation", 
+        model=model_id, 
+        model_kwargs={"torch_dtype": torch.bfloat16}, 
+        device_map="auto"
+    )
+    return pipeline
+
+llama_pipeline = load_llama_model()  # Load the model at the start of your script
 
 
 @st.cache_data
@@ -65,7 +82,8 @@ def plot_sentiment_scores(scores):
     plt.grid(True)
     st.pyplot(plt)
 
-def generate_feedback(sentences, scores):
+def generate_feedback(sentences, scores, pipeline):
+    """Generate feedback using the LLaMA model based on the provided sentences and sentiment scores."""
     # Prepare the combined text
     combined_text = ". ".join([f"{sentence} [Score: {score}]" for sentence, score in zip(sentences, scores)])
     prompt_text = f"""
@@ -79,14 +97,13 @@ def generate_feedback(sentences, scores):
     {combined_text}
     """
 
-    # Sending the prompt to LLaMA
-    response = ollama.chat(
-        model='llama3',
-        messages=[{'role': 'user', 'content': prompt_text}]
-    )
+    # Sending the prompt to the LLaMA model
+    response = pipeline(prompt_text, max_length=512)  # You can adjust max_length as needed
 
-    # Extracting the content from the response
-    return response['message']['content']
+    # Extracting the generated text from the response
+    # The output from Hugging Face's pipeline is a list of generated texts, so we pick the first.
+    generated_text = response[0]['generated_text']
+    return generated_text
 
 
 def main():
@@ -119,7 +136,8 @@ def main():
                 text_container.markdown(full_text, unsafe_allow_html=True)
                 update_line_chart(chart_container, all_scores)
 
-            feedback = generate_feedback(sentences, all_scores)
+            llama_pipeline = load_llama_model()
+            feedback = generate_feedback(sentences, scores, llama_pipeline)
             feedback = feedback.replace('•', '-').replace('\n\n', '\n')  # Replace bullets and manage extra new lines
 
             # Add extra line breaks before each bold section except the first
