@@ -98,7 +98,6 @@ def main():
     if uploaded_files:
         selected_file = st.selectbox('Choose a file to analyze:', [file.name for file in uploaded_files])
         file_dict = {file.name: file for file in uploaded_files}
-        selected_file = st.selectbox('Choose a file to analyze:', list(file_dict.keys()))
 
         if st.button('Analyze'):
             file_to_analyze = file_dict[selected_file]
