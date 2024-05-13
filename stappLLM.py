@@ -96,9 +96,16 @@ def main():
     uploaded_files = st.file_uploader("Upload Files", type=['txt'], accept_multiple_files=True)
 
     if uploaded_files:
-        selected_file = st.selectbox('Choose a file to analyze:', list(uploaded_files.keys()))
+        selected_file = st.selectbox('Choose a file to analyze:', [file.name for file in uploaded_files])
+        file_dict = {file.name: file for file in uploaded_files}
+        selected_file = st.selectbox('Choose a file to analyze:', list(file_dict.keys()))
+
         if st.button('Analyze'):
-            sentences, scores = perform_sentiment_analysis(uploaded_files[selected_file])
+            file_to_analyze = file_dict[selected_file]
+            file_content = file_to_analyze.getvalue().decode("utf-8")  # Assuming the file content is in UTF-8
+            sentences, scores = perform_sentiment_analysis(file_content)
+            # Proceed with your existing code for displaying results
+
             col1, col2, col3 = st.columns([2, 3, 2])  # Adjust column width ratios as needed
 
             text_container = col1.empty()  # Container for streaming text
