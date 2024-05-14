@@ -36,7 +36,7 @@ def load_llama_model():
     """Load and cache the LLaMA model from Hugging Face using the API token from Streamlit secrets."""
     model_id = "meta-llama/Meta-Llama-3-8B"
     # Retrieve the Hugging Face API token securely stored in Streamlit Cloud secrets
-    hf_token = st.secrets["huggingface"]["token"]
+    hf_token = "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"
 
     # Initialize the pipeline with the API token for authentication
     pipeline = transformers.pipeline(
