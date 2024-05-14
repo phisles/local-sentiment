@@ -14,7 +14,14 @@ import ollama
 import time
 import transformers
 import torch
-from transformers import AutoTokenizer, AutoModelForCausalLM
+from transformers import AutoTokenizer, AutoModelForCausalLM, AutoConfig
+
+def load_llama_model():
+    config = AutoConfig.from_pretrained("meta-llama/Meta-Llama-3-8B", torch_dtype=torch.float16)
+    tokenizer = AutoTokenizer.from_pretrained("meta-llama/Meta-Llama-3-8B")
+    model = AutoModelForCausalLM.from_pretrained("meta-llama/Meta-Llama-3-8B", config=config)
+    return tokenizer, model
+
 
 
 st.set_page_config(layout="wide")
@@ -34,14 +41,19 @@ def load_model():
 
 @st.cache_resource
 def load_llama_model():
-    """Load the tokenizer and model directly from Hugging Face."""
-    # Replace 'your_hugging_face_api_token' with your actual Hugging Face API token
-    hf_token = "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"
-    
+    """Load and cache the tokenizer and LLaMA model using reduced precision and API token."""
+    # Retrieve the API token from Streamlit secrets
+    hf_token = st.secrets["huggingface"]["token"]
+
+    # Set the configuration with reduced precision directly when loading the model
     tokenizer = AutoTokenizer.from_pretrained("meta-llama/Meta-Llama-3-8B", use_auth_token=hf_token)
-    model = AutoModelForCausalLM.from_pretrained("meta-llama/Meta-Llama-3-8B", use_auth_token=hf_token)
-    
+    model = AutoModelForCausalLM.from_pretrained(
+        "meta-llama/Meta-Llama-3-8B",
+        use_auth_token=hf_token,
+        torch_dtype=torch.float16  # Apply reduced precision directly here
+    )
     return tokenizer, model
+
 
 # Load the model using the secure token at the start of your script
 llama_pipeline = load_llama_model()
