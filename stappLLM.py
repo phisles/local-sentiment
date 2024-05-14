@@ -41,17 +41,9 @@ def load_model():
 
 @st.cache_resource
 def load_llama_model():
-    """Load and cache the tokenizer and LLaMA model using reduced precision and API token."""
-    # Retrieve the API token from Streamlit secrets
-    hf_token = st.secrets["huggingface"]["token"]
-
-    # Set the configuration with reduced precision directly when loading the model
-    tokenizer = AutoTokenizer.from_pretrained("meta-llama/Meta-Llama-3-8B", use_auth_token=hf_token)
-    model = AutoModelForCausalLM.from_pretrained(
-        "meta-llama/Meta-Llama-3-8B",
-        use_auth_token=hf_token,
-        torch_dtype=torch.float16  # Apply reduced precision directly here
-    )
+    """Load and cache the LLaMA-2 model."""
+    tokenizer = AutoTokenizer.from_pretrained("meta-llama/LaMAML-2")
+    model = AutoModelForCausalLM.from_pretrained("meta-llama/LaMAML-2")
     return tokenizer, model
 
 
