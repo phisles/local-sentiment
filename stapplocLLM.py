@@ -18,6 +18,9 @@ st.set_page_config(layout="wide")
 
 # Suppress specific FutureWarnings
 warnings.filterwarnings("ignore", category=FutureWarning)
+# Suppress Matplotlib warnings about too many open figures
+plt.rcParams['figure.max_open_warning'] = 100  # You can set this to a higher value
+
 
 # Load NLTK's Punkt tokenizer for sentence splitting if you havent already
 #nltk.download('punkt', quiet=True)
@@ -65,6 +68,7 @@ def plot_sentiment_scores(scores):
     plt.ylim(0, 4)  # Set y-axis to show the full range of scores
     plt.grid(True)
     st.pyplot(plt)
+    plt.close()  # Close the figure to avoid memory issues
 
 def generate_feedback(sentences, scores):
     # Prepare the combined text
@@ -136,10 +140,6 @@ def main():
 
             # Stream feedback directly (considering it's properly formatted now)
             feedback_container.markdown(formatted_feedback, unsafe_allow_html=True)
-
-
-
-
 
 
 def stream_annotated_text(sentences, scores):
