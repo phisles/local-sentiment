@@ -13,7 +13,8 @@ from streamlit_extras.streaming_write import write
 import ollama
 import time
 import transformers
-import torch 
+import torch
+from transformers import AutoTokenizer, AutoModelForCausalLM
 
 
 st.set_page_config(layout="wide")
@@ -33,20 +34,14 @@ def load_model():
 
 @st.cache_resource
 def load_llama_model():
-    """Load and cache the LLaMA model from Hugging Face using the API token from Streamlit secrets."""
-    model_id = "meta-llama/Meta-Llama-3-8B"
-    # Retrieve the Hugging Face API token securely stored in Streamlit Cloud secrets
+    """Load the tokenizer and model directly from Hugging Face."""
+    # Replace 'your_hugging_face_api_token' with your actual Hugging Face API token
     hf_token = "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"
-
-    # Initialize the pipeline with the API token for authentication
-    pipeline = transformers.pipeline(
-        "text-generation",
-        model=model_id,
-        model_kwargs={"torch_dtype": torch.bfloat16},  # Using reduced precision to save memory
-        device_map="auto",  # Automatically use the best available device (GPU or CPU)
-        use_auth_token=hf_token  # Authenticate with the API token
-    )
-    return pipeline
+    
+    tokenizer = AutoTokenizer.from_pretrained("meta-llama/Meta-Llama-3-8B", use_auth_token=hf_token)
+    model = AutoModelForCausalLM.from_pretrained("meta-llama/Meta-Llama-3-8B", use_auth_token=hf_token)
+    
+    return tokenizer, model
 
 # Load the model using the secure token at the start of your script
 llama_pipeline = load_llama_model()
