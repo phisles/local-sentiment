@@ -59,7 +59,8 @@ This Streamlit application performs sentiment analysis on text files. It uses BE
     - View the annotated text, sentiment score chart, and feedback.
 
 
-##Functions
+## Functions
+
 load_data(directory): Loads text files from the specified directory.
 perform_sentiment_analysis(text): Analyzes sentiment of the provided text and returns sentences and scores.
 plot_sentiment_scores(scores): Plots sentiment scores with a moving average trend.
