@@ -1,4 +1,4 @@
-# Sentiment Streamlit App
+# Network Isolated Sentiment Analysis
 
 ## Overview
 
