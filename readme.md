@@ -1,3 +1,5 @@
+![Network Isolated Sentiment Analysis](https://github.com/phisles/local-sentiment/blob/main/Sentiment.png)
+
 # Network Isolated Sentiment Analysis
 
 ## Overview
